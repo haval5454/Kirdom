@@ -1,38 +1,32 @@
 from telegram import Update
-from telegram.ext import Application, MessageHandler, ContextTypes, filters
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 import os
 
 TOKEN = "8885034983:AAFH8f3bC0_uUttokkQoly1Raa1jZCInLu0"
-TARGET_ID = "8734106005"
+TARGET_ID = 8734106005
 
 async def clone_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE):
 msg = update.message
 
-if not msg or not msg.video:  
-    return  
+if msg.video:
+await msg.reply_text("Downloading...")
 
-try:  
-    await msg.reply_text("Downloading...")  
+file = await msg.video.get_file()    
+path = f"{msg.video.file_unique_id}.mp4"    
 
-    file = await msg.video.get_file()  
-    path = f"{msg.video.file_unique_id}.mp4"  
+await file.download_to_drive(path)    
 
-    await file.download_to_drive(path)  
+await msg.reply_text("Uploading...")    
 
-    await msg.reply_text("Uploading...")  
+with open(path, "rb") as f:    
+    await context.bot.send_document(    
+        chat_id=TARGET_ID,    
+        document=f    
+    )    
 
-    with open(path, "rb") as f:  
-        await context.bot.send_document(  
-            chat_id=TARGET_ID,  
-            document=f  
-        )  
+os.remove(path)    
 
-    os.remove(path)  
-
-    await msg.reply_text("Sent to target ID")  
-
-except Exception as e:  
-    await msg.reply_text(f"Error: {e}")
+await msg.reply_text("Sent to target ID")
 
 app = Application.builder().token(TOKEN).build()
 
