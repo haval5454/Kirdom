@@ -1,38 +1,61 @@
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+import asyncio
+import logging
 import os
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
 TOKEN = "8885034983:AAFH8f3bC0_uUttokkQoly1Raa1jZCInLu0"
 TARGET_ID = 8734106005
 
-async def clone_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE):
-msg = update.message
+logging.basicConfig(level=logging.INFO)
 
-if msg.video:
-await msg.reply_text("Downloading...")
 
-file = await msg.video.get_file()    
-path = f"{msg.video.file_unique_id}.mp4"    
+async def process_video(bot, chat_id, message_id, video):
+    path = f"{video.file_unique_id}.mp4"
 
-await file.download_to_drive(path)    
+    try:
+        file = await bot.get_file(video.file_id)
+        await file.download_to_drive(path)
 
-await msg.reply_text("Uploading...")    
+        with open(path, "rb") as f:
+            await bot.send_document(
+                chat_id=TARGET_ID,
+                document=f
+            )
 
-with open(path, "rb") as f:    
-    await context.bot.send_document(    
-        chat_id=TARGET_ID,    
-        document=f    
-    )    
+    except Exception:
+        logging.exception("Video processing failed")
 
-os.remove(path)    
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
 
-await msg.reply_text("Sent to target ID")
 
-app = Application.builder().token(TOKEN).build()
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.message
 
-app.add_handler(
-MessageHandler(filters.VIDEO, clone_and_send)
-)
+    if not msg or not msg.video:
+        return
 
-print("Bot running...")
-app.run_polling()
+    asyncio.create_task(
+        process_video(
+            context.bot,
+            msg.chat_id,
+            msg.message_id,
+            msg.video
+        )
+    )
+
+
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(
+        MessageHandler(filters.VIDEO, handle)
+    )
+
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
