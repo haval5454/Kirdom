@@ -1,37 +1,43 @@
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, ContextTypes, filters
 import os
 
 TOKEN = "8885034983:AAFH8f3bC0_uUttokkQoly1Raa1jZCInLu0"
-TARGET_ID = 8734106005
+TARGET_ID = "8734106005"
 
 async def clone_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE):
-msg = update.message
+    msg = update.message
 
-if msg.video:  
-    await msg.reply_text("Downloading...")  
+    if not msg or not msg.video:
+        return
 
-    file = await msg.video.get_file()  
-    path = f"{msg.video.file_unique_id}.mp4"  
+    try:
+        await msg.reply_text("Downloading...")
 
-    await file.download_to_drive(path)  
+        file = await msg.video.get_file()
+        path = f"{msg.video.file_unique_id}.mp4"
 
-    await msg.reply_text("Uploading...")  
+        await file.download_to_drive(path)
 
-    with open(path, "rb") as f:  
-        await context.bot.send_document(  
-            chat_id=TARGET_ID,  
-            document=f  
-        )  
+        await msg.reply_text("Uploading...")
 
-    os.remove(path)  
+        with open(path, "rb") as f:
+            await context.bot.send_document(
+                chat_id=TARGET_ID,
+                document=f
+            )
 
-    await msg.reply_text("Sent to target ID")
+        os.remove(path)
+
+        await msg.reply_text("Sent to target ID")
+
+    except Exception as e:
+        await msg.reply_text(f"Error: {e}")
 
 app = Application.builder().token(TOKEN).build()
 
 app.add_handler(
-MessageHandler(filters.VIDEO, clone_and_send)
+    MessageHandler(filters.VIDEO, clone_and_send)
 )
 
 print("Bot running...")
