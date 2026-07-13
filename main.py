@@ -35,4 +35,4 @@ MessageHandler(filters.VIDEO, clone_and_send)
 )
 
 print("Bot running...")
-app.run_polling().
+app.run_polling()
